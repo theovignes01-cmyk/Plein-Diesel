@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MonPlein">
+  <meta name="theme-color" content="#E8650A">
+  <title>MonPlein</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    :root{
+      --orange:#E8650A;--orange-dark:#B34D07;--orange-light:#FFF3E8;
+      --bg:#F2F2F7;--card:#FFFFFF;--surface:#EFEFF4;
+      --text:#1A1A1A;--text-muted:#8A8A8E;--border:rgba(0,0,0,0.09);
+      --radius:14px;--radius-sm:10px;
+      --green:#34C759;--green-light:rgba(52,199,89,0.12);
+      --blue:#007AFF;--red:#FF3B30;--red-light:rgba(255,59,48,0.10);
+      --amber:#FF9500;--amber-light:rgba(255,149,0,0.12);
+    }
+    @media(prefers-color-scheme:dark){
+      :root{--bg:#111;--card:#1C1C1E;--surface:#2C2C2E;--text:#F0F0F0;--text-muted:#8A8A8E;--border:rgba(255,255,255,0.08);--orange-light:rgba(232,101,10,0.15)}
+    }
+    html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;color:var(--text);overflow:hidden}
+    .app{display:flex;flex-direction:column;height:100dvh;max-width:500px;margin:0 auto}
+
+    .header{background:var(--card);border-bottom:.5px solid var(--border);padding:max(env(safe-area-inset-top),16px) 20px 0}
+    .header-inner{display:flex;align-items:center;gap:12px}
+    .fuel-icon{width:38px;height:38px;background:var(--orange);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .fuel-icon svg{width:20px;height:20px;fill:white}
+    .header h1{font-size:19px;font-weight:700}
+    .header p{font-size:12px;color:var(--text-muted)}
+    .tabbar{display:flex;padding-top:10px;overflow-x:auto;scrollbar-width:none}
+    .tabbar::-webkit-scrollbar{display:none}
+    .tab-btn{flex:1;min-width:58px;padding:9px 2px 12px;border:none;background:none;font-size:10px;font-weight:500;color:var(--text-muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;white-space:nowrap;position:relative}
+    .tab-btn svg{width:22px;height:22px;fill:var(--text-muted)}
+    .tab-btn.active{color:var(--orange)}
+    .tab-btn.active svg{fill:var(--orange)}
+    .tab-badge{position:absolute;top:6px;right:calc(50% - 18px);width:8px;height:8px;background:var(--red);border-radius:50%;display:none}
+    .tab-badge.visible{display:block}
+
+    .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .section{display:none;padding:10px 12px;padding-bottom:max(env(safe-area-inset-bottom,10px),16px)}
+    .section.active{display:block}
+
+    .card{background:var(--card);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px}
+    .card-title{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .form-group{display:flex;flex-direction:column;gap:4px}
+    .form-group.full{grid-column:1/-1}
+    label{font-size:11px;font-weight:500;color:var(--text-muted);min-height:24px;display:flex;align-items:flex-end}
+    input,textarea,select{background:var(--surface);border:none;border-radius:var(--radius-sm);padding:10px 12px;font-size:15px;color:var(--text);width:100%;font-family:inherit;-webkit-appearance:none}
+    input:focus,textarea:focus,select:focus{outline:2px solid var(--orange);outline-offset:0}
+    textarea{resize:none;min-height:44px;font-size:13px}
+    select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238A8A8E' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+    .btn-primary{width:100%;padding:13px;background:var(--orange);color:white;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px;transition:background .2s}
+    .btn-primary:active{transform:scale(.98)}
+    .btn-secondary{width:100%;padding:11px;background:var(--surface);color:var(--text);border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:6px}
+    .btn-danger{width:100%;padding:11px;background:var(--red-light);color:var(--red);border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px}
+
+    .prev-banner{background:var(--card);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+    .prev-banner-header{background:var(--orange);padding:9px 14px;display:flex;justify-content:space-between;align-items:baseline}
+    .prev-banner-header span{font-size:13px;font-weight:600;color:white}
+    .prev-banner-header small{font-size:12px;color:rgba(255,255,255,.75)}
+    .info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:.5px solid var(--border);font-size:13px}
+    .info-row:last-child{border-bottom:none}
+    .info-key{color:var(--text-muted)}
+    .info-val{font-weight:600}
+    .info-val.orange{color:var(--orange)}
+    .info-val.green{color:var(--green)}
+
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .stat-card{background:var(--card);border-radius:var(--radius);padding:14px 16px}
+    .stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+    .stat-value{font-size:24px;font-weight:700;line-height:1.1}
+    .stat-unit{font-size:13px;font-weight:400;color:var(--text-muted)}
+
+    .fill-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:.5px solid var(--border)}
+    .fill-item:last-child{border-bottom:none;padding-bottom:0}
+    .fill-dot{width:8px;height:8px;background:var(--orange);border-radius:50%;flex-shrink:0}
+    .fill-date{font-size:12px;color:var(--text-muted);min-width:58px}
+    .fill-info{flex:1;min-width:0}
+    .fill-main{font-size:14px;font-weight:600}
+    .fill-sub{font-size:12px;color:var(--text-muted)}
+    .fill-note{font-size:11px;color:var(--orange-dark);font-style:italic;margin-top:1px}
+    .fill-right{text-align:right;flex-shrink:0}
+    .fill-price{font-size:14px;font-weight:700;color:var(--orange)}
+    .fill-actions{display:flex;gap:2px;flex-shrink:0}
+    .icon-btn{background:none;border:none;cursor:pointer;padding:5px;font-size:15px;line-height:1;border-radius:6px}
+    .icon-btn:active{background:var(--surface)}
+    .empty-state{text-align:center;padding:28px 20px;color:var(--text-muted);font-size:14px;line-height:1.7}
+
+    .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+    .kpi{background:var(--card);border-radius:var(--radius);padding:12px;text-align:center}
+    .kpi-val{font-size:20px;font-weight:800;line-height:1}
+    .kpi-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-top:4px}
+    .kpi.accent{background:var(--orange)}
+    .kpi.accent .kpi-val{color:white}
+    .kpi.accent .kpi-lbl{color:rgba(255,255,255,.75)}
+    .chart-wrap{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .chart-title{font-size:14px;font-weight:600}
+    .chart-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--surface);color:var(--text-muted)}
+    .chart-box{position:relative;width:100%;height:200px}
+    .chart-box canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important}
+    .trend-row{display:flex;gap:8px;margin-bottom:14px}
+    .trend-card{flex:1;background:var(--card);border-radius:var(--radius);padding:12px 14px}
+    .trend-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .trend-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px}
+    .trend-val{font-size:18px;font-weight:700}
+    .trend-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .compare-table{width:100%;border-collapse:collapse;font-size:12px}
+    .compare-table th{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;padding:0 0 10px;text-align:left}
+    .compare-table th:not(:first-child){text-align:right}
+    .compare-table td{padding:7px 0;border-bottom:.5px solid var(--border);vertical-align:middle}
+    .compare-table tr:last-child td{border-bottom:none}
+    .compare-table td:not(:first-child){text-align:right;font-weight:600}
+    .td-date{color:var(--text-muted);font-size:11px}
+    .td-best{color:var(--green)}
+    .td-worst{color:var(--red)}
+    .mini-bar-wrap{display:flex;justify-content:flex-end;align-items:center;gap:5px}
+    .mini-bar{height:5px;border-radius:3px;background:var(--orange);min-width:2px;flex-shrink:0}
+
+    .vidange-bloc{border-radius:var(--radius);padding:16px;margin-bottom:14px}
+    .vidange-bloc.ok{background:var(--green-light);border:1.5px solid var(--green)}
+    .vidange-bloc.warn{background:var(--amber-light);border:1.5px solid var(--amber)}
+    .vidange-bloc.alert{background:var(--red-light);border:1.5px solid var(--red)}
+    .vidange-bloc.empty{background:var(--surface);border:1.5px dashed var(--border)}
+    .vidange-title{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .progress-wrap{height:10px;background:rgba(0,0,0,0.08);border-radius:5px;overflow:hidden;margin:10px 0 6px}
+    @media(prefers-color-scheme:dark){.progress-wrap{background:rgba(255,255,255,0.1)}}
+    .progress-fill{height:100%;border-radius:5px}
+    .progress-fill.ok{background:var(--green)}
+    .progress-fill.warn{background:var(--amber)}
+    .progress-fill.alert{background:var(--red)}
+    .progress-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)}
+
+    .interv-item{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:.5px solid var(--border)}
+    .interv-item:last-child{border-bottom:none;padding-bottom:0}
+    .interv-dot{width:9px;height:9px;background:var(--blue);border-radius:50%;flex-shrink:0;margin-top:4px}
+    .interv-date{font-size:12px;color:var(--text-muted);min-width:60px;flex-shrink:0}
+    .interv-info{flex:1;min-width:0}
+    .interv-type{font-size:14px;font-weight:600}
+    .interv-sub{font-size:12px;color:var(--text-muted);margin-top:1px}
+    .interv-note{font-size:11px;color:var(--blue);font-style:italic;margin-top:2px}
+    .interv-price{font-size:14px;font-weight:700;color:var(--blue);flex-shrink:0}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+    .modal-overlay.hidden{display:none}
+    .modal{background:var(--card);border-radius:20px 20px 0 0;padding:20px;padding-bottom:max(env(safe-area-inset-bottom),20px);width:100%;max-width:500px;max-height:90dvh;overflow-y:auto}
+    .modal-title{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+    .modal-close{background:var(--surface);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;color:var(--text-muted);display:flex;align-items:center;justify-content:center}
+
+    .sub-tabs{display:flex;gap:8px;margin-bottom:14px}
+    .sub-tab{flex:1;padding:9px;border:.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;text-align:center;font-family:inherit}
+    .sub-tab.active{background:var(--orange);color:white;border-color:var(--orange)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-inner">
+      <div class="fuel-icon">
+        <svg viewBox="0 0 24 24"><path d="M20 3H6C4.9 3 4 3.9 4 5v16c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V9.83l1.88-1.88c.37-.37.37-.96 0-1.33L18.17 4.9l-.17-.17V3zM6 5h12v2H6V5zm6 13c-1.66 0-3-1.34-3-3 0-1.31.83-2.42 2-2.83V10h2v2.17c1.17.41 2 1.52 2 2.83 0 1.66-1.34 3-3 3zm0-4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>
+      </div>
+      <div><h1>MonPlein</h1><p>Suivi carburant diesel</p></div>
+    </div>
+    <div class="tabbar">
+      <button class="tab-btn active" onclick="showTab('add',this)">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+        Nouveau
+      </button>
+      <button class="tab-btn" onclick="showTab('entretien',this)">
+        <div class="tab-badge" id="vidange-badge"></div>
+        <svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+        Entretien
+      </button>
+      <button class="tab-btn" onclick="showTab('stats',this)">
+        <svg viewBox="0 0 24 24"><path d="M5 9h4v10H5zm6-4h4v14h-4zm6 8h4v6h-4z"/></svg>
+        Stats
+      </button>
+      <button class="tab-btn" onclick="showTab('recap',this)">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        Récap
+      </button>
+      <button class="tab-btn" onclick="showTab('history',this)">
+        <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        Historique
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- NOUVEAU PLEIN -->
+    <div id="tab-add" class="section active">
+      <div id="prev-banner"></div>
+      <div class="card">
+        <div class="card-title">Saisir un plein</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Date</label><input type="date" id="input-date"></div>
+          <div class="form-group"><label>Nombre de litres</label><input type="number" id="input-litres" placeholder="45.2" step="0.1" inputmode="decimal" oninput="autoCalc()"></div>
+          <div class="form-group"><label>Prix / litre (€)</label><input type="number" id="input-prix-litre" placeholder="1.559" step="0.001" inputmode="decimal" oninput="autoCalc()"></div>
+          <div class="form-group"><label>Prix total (€) — auto</label><input type="number" id="input-prix-total" placeholder="70.10" step="0.01" inputmode="decimal" style="opacity:.7;pointer-events:none"></div>
+          <div class="form-group"><label>Km parcourus avec le plein précédent</label><input type="number" id="input-kmdep" placeholder="950" inputmode="numeric"></div>
+          <div class="form-group"><label>Conso moyenne (L/100km)</label><input type="number" id="input-conso" placeholder="4.9" step="0.1" inputmode="decimal"></div>
+          <div class="form-group full"><label>Note (optionnel)</label><textarea id="input-note" placeholder="Ex: plein chez Total, restait 50km…"></textarea></div>
+        </div>
+        <button class="btn-primary" id="save-btn" onclick="addFill()">Enregistrer</button>
+      </div>
+    </div>
+
+    <!-- ENTRETIEN -->
+    <div id="tab-entretien" class="section">
+      <div class="sub-tabs">
+        <button class="sub-tab active" onclick="showSubTab('vidange',this)">🛢 Vidange</button>
+        <button class="sub-tab" onclick="showSubTab('interventions',this)">🔧 Interventions</button>
+        <button class="sub-tab" onclick="showSubTab('add-interv',this)">＋ Ajouter</button>
+      </div>
+      <div id="subtab-vidange">
+        <div id="vidange-status-bloc"></div>
+        <div class="card">
+          <div class="card-title">Paramétrer la vidange</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Date de la dernière vidange</label><input type="date" id="v-date"></div>
+            <div class="form-group"><label>Kilométrage à la vidange</label><input type="number" id="v-km" placeholder="85000" inputmode="numeric"></div>
+            <div class="form-group full"><label>Kilométrage actuel estimé</label><input type="number" id="v-km-now" placeholder="91000" inputmode="numeric"></div>
+          </div>
+          <button class="btn-primary" onclick="saveVidange()">Enregistrer la vidange</button>
+        </div>
+      </div>
+      <div id="subtab-interventions" style="display:none">
+        <div class="card" id="interv-total-bloc" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:13px;color:var(--text-muted);text-transform:uppercase;font-weight:600;letter-spacing:.4px">Total interventions</div><div style="font-size:28px;font-weight:800;margin-top:2px" id="interv-total-val">—</div></div>
+            <div style="font-size:28px">🔧</div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="card-title" style="margin:0">Historique</div>
+            <span id="interv-count" style="font-size:12px;color:var(--text-muted)"></span>
+          </div>
+          <div id="interv-list"><div class="empty-state">Aucune intervention enregistrée.</div></div>
+        </div>
+      </div>
+      <div id="subtab-add-interv" style="display:none">
+        <div class="card">
+          <div class="card-title">Nouvelle intervention</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Date</label><input type="date" id="ni-date"></div>
+            <div class="form-group"><label>Kilométrage</label><input type="number" id="ni-km" placeholder="91000" inputmode="numeric"></div>
+            <div class="form-group full"><label>Type d'intervention</label>
+              <select id="ni-type" onchange="toggleAutre()">
+                <option value="">Sélectionner…</option>
+                <option>Vidange + filtre huile</option>
+                <option>Filtres (air, habitacle, gasoil)</option>
+                <option>Plaquettes de frein</option>
+                <option>Disques de frein</option>
+                <option>Pneus</option>
+                <option>Courroie de distribution</option>
+                <option>Batterie</option>
+                <option>Amortisseurs</option>
+                <option>Révision complète</option>
+                <option>Contrôle technique</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <div class="form-group full" id="ni-autre-wrap" style="display:none"><label>Préciser</label><input type="text" id="ni-autre" placeholder="Détail de l'intervention"></div>
+            <div class="form-group"><label>Prix (€)</label><input type="number" id="ni-prix" placeholder="180" step="0.01" inputmode="decimal"></div>
+            <div class="form-group"><label>Garage</label><input type="text" id="ni-garage" placeholder="Ex: Norauto"></div>
+            <div class="form-group full"><label>Notes</label><textarea id="ni-note" placeholder="Détails, observations…"></textarea></div>
+          </div>
+          <button class="btn-primary" id="ni-save-btn" onclick="addInterv()">Enregistrer l'intervention</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div id="tab-stats" class="section">
+      <div id="stats-content"><div class="card"><div class="empty-state">Ajoutez au moins 2 pleins pour voir les statistiques.</div></div></div>
+    </div>
+
+    <!-- RÉCAP -->
+    <div id="tab-recap" class="section">
+      <div id="recap-content"></div>
+      <div class="card" style="margin-top:4px">
+        <div class="card-title">Sauvegarde des données</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.5">Exportez vos données en fichier JSON pour les sauvegarder dans Fichiers / iCloud. Vous pourrez les réimporter à tout moment.</div>
+        <button class="btn-primary" style="margin-top:0" onclick="exportData()">📥 Exporter mes données</button>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+          <label for="import-file" style="flex:1;padding:11px;background:var(--surface);border-radius:var(--radius-sm);font-size:14px;font-weight:500;color:var(--text);text-align:center;cursor:pointer;min-height:unset;display:block">📤 Importer une sauvegarde</label>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+        </div>
+        <div id="import-msg" style="font-size:12px;color:var(--green);text-align:center;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- HISTORIQUE -->
+    <div id="tab-history" class="section">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin:0">Tous les pleins</div>
+          <span id="history-count" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <div id="history-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal plein -->
+<div class="modal-overlay hidden" id="edit-modal" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal">
+    <div class="modal-title">Modifier le plein<button class="modal-close" onclick="closeEditModal()">×</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="edit-date"></div>
+      <div class="form-group"><label>Litres</label><input type="number" id="edit-litres" step="0.1" inputmode="decimal" oninput="autoCalcEdit()"></div>
+      <div class="form-group"><label>Prix / litre (€)</label><input type="number" id="edit-prix-litre" step="0.001" inputmode="decimal" oninput="autoCalcEdit()"></div>
+      <div class="form-group"><label>Prix total (€)</label><input type="number" id="edit-prix-total" step="0.01" inputmode="decimal"></div>
+      <div class="form-group"><label>Km parcourus depuis le précédent</label><input type="number" id="edit-kmdep" inputmode="numeric"></div>
+      <div class="form-group"><label>Conso (L/100km)</label><input type="number" id="edit-conso" step="0.1" inputmode="decimal"></div>
+      <div class="form-group full"><label>Note</label><textarea id="edit-note"></textarea></div>
+    </div>
+    <button class="btn-primary" onclick="saveEdit()">Enregistrer</button>
+    <button class="btn-danger" onclick="deleteFromModal()">Supprimer ce plein</button>
+    <button class="btn-secondary" onclick="closeEditModal()">Annuler</button>
+  </div>
+</div>
+
+<!-- Modal intervention -->
+<div class="modal-overlay hidden" id="edit-interv-modal" onclick="if(event.target===this)closeEditIntervModal()">
+  <div class="modal">
+    <div class="modal-title">Modifier l'intervention<button class="modal-close" onclick="closeEditIntervModal()">×</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="ei-date"></div>
+      <div class="form-group"><label>Kilométrage</label><input type="number" id="ei-km" inputmode="numeric"></div>
+      <div class="form-group full"><label>Type</label><input type="text" id="ei-type"></div>
+      <div class="form-group"><label>Prix (€)</label><input type="number" id="ei-prix" step="0.01" inputmode="decimal"></div>
+      <div class="form-group"><label>Garage</label><input type="text" id="ei-garage"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="ei-note"></textarea></div>
+    </div>
+    <button class="btn-primary" onclick="saveEditInterv()">Enregistrer</button>
+    <button class="btn-danger" onclick="deleteInterv()">Supprimer</button>
+    <button class="btn-secondary" onclick="closeEditIntervModal()">Annuler</button>
+  </div>
+</div>
+
+<script>
+const SEED=[
+  {date:'2023-02-27',kmdep:563,litres:28.09,prixLitre:1.78,prixTotal:50,conso:null,note:''},
+  {date:'2023-03-17',kmdep:755,litres:33.17,prixLitre:1.80,prixTotal:60,conso:null,note:''},
+  {date:'2023-04-03',kmdep:580,litres:25.96,prixLitre:1.76,prixTotal:45.87,conso:null,note:''},
+  {date:'2023-04-19',kmdep:675,litres:28.56,prixLitre:1.75,prixTotal:50.01,conso:null,note:''},
+  {date:'2023-05-09',kmdep:795,litres:24.70,prixLitre:1.62,prixTotal:40.22,conso:null,note:''},
+  {date:'2023-05-28',kmdep:657,litres:37.30,prixLitre:1.66,prixTotal:62.18,conso:null,note:''},
+  {date:'2023-06-20',kmdep:830,litres:35.97,prixLitre:1.66,prixTotal:60,conso:null,note:''},
+  {date:'2023-07-22',kmdep:0,litres:43,prixLitre:1.68,prixTotal:70,conso:null,note:'C3'},
+  {date:'2023-08-13',kmdep:0,litres:27,prixLitre:1.85,prixTotal:50,conso:null,note:''},
+  {date:'2023-08-21',kmdep:0,litres:7.5,prixLitre:1.98,prixTotal:15,conso:null,note:"Rentrer à Lourdes depuis chez Nathan"},
+  {date:'2023-08-22',kmdep:0,litres:43,prixLitre:1.85,prixTotal:80,conso:null,note:''},
+  {date:'2023-09-09',kmdep:945,litres:43,prixLitre:1.86,prixTotal:80,conso:null,note:''},
+  {date:'2023-10-07',kmdep:970,litres:47,prixLitre:1.75,prixTotal:82.58,conso:null,note:''},
+  {date:'2023-11-02',kmdep:935,litres:47.62,prixLitre:1.78,prixTotal:85,conso:null,note:''},
+  {date:'2023-12-05',kmdep:982,litres:48.05,prixLitre:1.76,prixTotal:85,conso:null,note:'Plein chez Total'},
+  {date:'2024-01-09',kmdep:991,litres:53.16,prixLitre:1.69,prixTotal:90,conso:null,note:''},
+  {date:'2024-02-22',kmdep:1100,litres:47.83,prixLitre:1.81,prixTotal:87,conso:null,note:''},
+  {date:'2024-04-01',kmdep:960,litres:46.78,prixLitre:1.75,prixTotal:82,conso:null,note:''},
+  {date:'2024-04-26',kmdep:943,litres:49,prixLitre:1.73,prixTotal:85,conso:null,note:''},
+  {date:'2024-06-06',kmdep:1007,litres:52,prixLitre:1.68,prixTotal:87.57,conso:null,note:''},
+  {date:'2024-07-22',kmdep:1052,litres:48,prixLitre:1.71,prixTotal:82.48,conso:null,note:'Restait 100km'},
+  {date:'2024-08-25',kmdep:1033,litres:52.5,prixLitre:1.62,prixTotal:85,conso:null,note:'Restait 70km'},
+  {date:'2024-09-29',kmdep:1140,litres:49,prixLitre:1.58,prixTotal:80,conso:null,note:'Restait 50km'},
+  {date:'2024-10-30',kmdep:1060,litres:54.18,prixLitre:1.61,prixTotal:87.47,conso:null,note:'Restait 45km'},
+  {date:'2024-12-21',kmdep:1090,litres:24,prixLitre:1.66,prixTotal:40,conso:null,note:'Pour finir carte carburant — restait 70km'},
+  {date:'2025-01-12',kmdep:487,litres:49.21,prixLitre:1.67,prixTotal:82.62,conso:null,note:'Restait 70km'},
+  {date:'2025-02-09',kmdep:977,litres:46,prixLitre:1.69,prixTotal:77.92,conso:null,note:'Restait 130km'},
+  {date:'2025-03-16',kmdep:1062,litres:54.6,prixLitre:1.64,prixTotal:90,conso:null,note:'Restait 35km'},
+  {date:'2025-04-10',kmdep:1173,litres:53,prixLitre:1.60,prixTotal:85.29,conso:null,note:'Restait 45km'},
+  {date:'2025-05-07',kmdep:1152,litres:49,prixLitre:1.57,prixTotal:76.90,conso:null,note:'Restait 10km'},
+  {date:'2025-06-02',kmdep:1031,litres:51,prixLitre:1.57,prixTotal:80,conso:null,note:'Restait 60km'},
+  {date:'2025-06-09',kmdep:675,litres:31,prixLitre:1.49,prixTotal:46,conso:null,note:'Restait 430km'},
+  {date:'2025-06-21',kmdep:952,litres:49,prixLitre:1.66,prixTotal:81.61,conso:null,note:'Restait 60km'},
+  {date:'2025-07-12',kmdep:958,litres:48.5,prixLitre:1.65,prixTotal:80,conso:null,note:'Restait 65km'},
+  {date:'2025-08-21',kmdep:992,litres:10,prixLitre:1.60,prixTotal:16,conso:null,note:''},
+  {date:'2025-08-24',kmdep:100,litres:43,prixLitre:1.59,prixTotal:68,conso:null,note:'Full — 100km depuis le précédent'},
+  {date:'2025-09-06',kmdep:970,litres:46,prixLitre:1.51,prixTotal:70,conso:null,note:''},
+  {date:'2025-09-16',kmdep:980,litres:43.5,prixLitre:1.47,prixTotal:64,conso:null,note:''},
+  {date:'2025-09-17',kmdep:500,litres:32.5,prixLitre:1.47,prixTotal:48,conso:null,note:'Desta'},
+  {date:'2025-09-30',kmdep:1041,litres:18.45,prixLitre:1.63,prixTotal:30,conso:null,note:'Moitié réservoir'},
+  {date:'2025-10-12',kmdep:500,litres:50,prixLitre:1.59,prixTotal:80,conso:null,note:''},
+  {date:'2025-10-18',kmdep:300,litres:9,prixLitre:1.43,prixTotal:13,conso:null,note:''},
+  {date:'2025-11-22',kmdep:1004,litres:48,prixLitre:1.66,prixTotal:80,conso:null,note:''},
+  {date:'2025-12-24',kmdep:872,litres:46,prixLitre:1.56,prixTotal:72.5,conso:null,note:''},
+  {date:'2026-01-26',kmdep:1013,litres:51,prixLitre:1.64,prixTotal:83.5,conso:null,note:''},
+  {date:'2026-02-21',kmdep:787,litres:32,prixLitre:1.56,prixTotal:50,conso:null,note:''},
+  {date:'2026-03-05',kmdep:260,litres:12,prixLitre:1.84,prixTotal:22,conso:null,note:''},
+];
+
+// Nettoyage et init propre
+localStorage.removeItem('monplein_v4');
+const STORE_KEY = 'monplein_v5';
+if(!localStorage.getItem(STORE_KEY))
+  localStorage.setItem(STORE_KEY, JSON.stringify(SEED.map((f,i)=>({...f,id:1000+i}))));
+if(!localStorage.getItem('monplein_intervs'))
+  localStorage.setItem('monplein_intervs','[]');
+
+let fills = JSON.parse(localStorage.getItem(STORE_KEY)||'[]');
+let intervs = JSON.parse(localStorage.getItem('monplein_intervs')||'[]');
+let vidange = JSON.parse(localStorage.getItem('monplein_vidange')||'null');
+let editingId = null, editingIntervId = null;
+const charts = {};
+
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(fills)); }
+function saveIntervs(){ localStorage.setItem('monplein_intervs', JSON.stringify(intervs)); }
+function saveVidangeData(v){ localStorage.setItem('monplein_vidange', JSON.stringify(v)); vidange=v; }
+function sortedAsc(){ return [...fills].sort((a,b)=>new Date(a.date)-new Date(b.date)); }
+function sortedDesc(){ return [...fills].sort((a,b)=>new Date(b.date)-new Date(a.date)); }
+function sortedIntervDesc(){ return [...intervs].sort((a,b)=>new Date(b.date)-new Date(a.date)); }
+
+function showTab(t,btn){
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(t==='stats') renderStats();
+  else if(t==='recap') renderRecap();
+  else if(t==='history') renderHistory();
+  else if(t==='add') renderBanner();
+  else if(t==='entretien'){ renderVidangeBloc(); renderIntervList(); }
+}
+
+function showSubTab(t,btn){
+  ['vidange','interventions','add-interv'].forEach(s=>{
+    document.getElementById('subtab-'+s).style.display=s===t?'block':'none';
+  });
+  document.querySelectorAll('.sub-tab').forEach(el=>el.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(t==='interventions') renderIntervList();
+}
+
+function toggleAutre(){
+  document.getElementById('ni-autre-wrap').style.display=
+    document.getElementById('ni-type').value==='Autre'?'block':'none';
+}
+
+function autoCalc(){
+  const l=parseFloat(document.getElementById('input-litres').value);
+  const p=parseFloat(document.getElementById('input-prix-litre').value);
+  if(l>0&&p>0) document.getElementById('input-prix-total').value=(l*p).toFixed(2);
+}
+function autoCalcEdit(){
+  const l=parseFloat(document.getElementById('edit-litres').value);
+  const p=parseFloat(document.getElementById('edit-prix-litre').value);
+  if(l>0&&p>0) document.getElementById('edit-prix-total').value=(l*p).toFixed(2);
+}
+
+function fmt(d){ return new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtS(d){ return new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}); }
+function fmtY(d){ return new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'}); }
+
+function getConsoMoy(){
+  const s=sortedAsc(); let km=0,l=0;
+  for(const f of s){ if(f.kmdep>0){km+=f.kmdep;l+=f.litres;} }
+  return km>0?l/km*100:null;
+}
+
+// ── FILLS ──────────────────────────────────────────────────────────────────
+function addFill(){
+  const date=document.getElementById('input-date').value;
+  const litres=parseFloat(document.getElementById('input-litres').value);
+  const prixLitre=parseFloat(document.getElementById('input-prix-litre').value);
+  const prixTotal=parseFloat(document.getElementById('input-prix-total').value)||+(litres*prixLitre).toFixed(2);
+  const kmdep=parseFloat(document.getElementById('input-kmdep').value)||0;
+  const conso=parseFloat(document.getElementById('input-conso').value)||null;
+  const note=document.getElementById('input-note').value.trim();
+  if(!date||!litres||!prixLitre){ alert('Date, litres et prix/litre sont obligatoires.'); return; }
+  fills.push({date,litres,prixLitre,prixTotal,kmdep,conso,note,id:Date.now()});
+  save();
+  ['input-litres','input-prix-litre','input-prix-total','input-kmdep','input-conso','input-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('input-date').value=new Date().toISOString().split('T')[0];
+  renderBanner();
+  const btn=document.getElementById('save-btn');
+  btn.textContent='✓ Enregistré !'; btn.style.background='#34C759';
+  setTimeout(()=>{ btn.textContent='Enregistrer'; btn.style.background=''; },2000);
+}
+
+function openEditModal(id){
+  const f=fills.find(x=>x.id===id); if(!f) return;
+  editingId=id;
+  document.getElementById('edit-date').value=f.date||'';
+  document.getElementById('edit-litres').value=f.litres||'';
+  document.getElementById('edit-prix-litre').value=f.prixLitre||'';
+  document.getElementById('edit-prix-total').value=f.prixTotal||'';
+  document.getElementById('edit-kmdep').value=f.kmdep||'';
+  document.getElementById('edit-conso').value=f.conso||'';
+  document.getElementById('edit-note').value=f.note||'';
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+function closeEditModal(){ document.getElementById('edit-modal').classList.add('hidden'); editingId=null; }
+function saveEdit(){
+  if(!editingId) return;
+  const idx=fills.findIndex(x=>x.id===editingId); if(idx===-1) return;
+  fills[idx]={...fills[idx],
+    date:document.getElementById('edit-date').value,
+    litres:parseFloat(document.getElementById('edit-litres').value)||0,
+    prixLitre:parseFloat(document.getElementById('edit-prix-litre').value)||0,
+    prixTotal:parseFloat(document.getElementById('edit-prix-total').value)||0,
+    kmdep:parseFloat(document.getElementById('edit-kmdep').value)||0,
+    conso:parseFloat(document.getElementById('edit-conso').value)||null,
+    note:document.getElementById('edit-note').value.trim(),
+  };
+  save(); closeEditModal(); renderHistory(); renderBanner();
+}
+function deleteFromModal(){
+  if(!editingId||!confirm('Supprimer ce plein ?')) return;
+  fills=fills.filter(x=>x.id!==editingId); save();
+  closeEditModal(); renderHistory(); renderBanner(); renderRecap();
+}
+function deleteFill(id){
+  if(!confirm('Supprimer ce plein ?')) return;
+  fills=fills.filter(f=>f.id!==id); save(); renderHistory(); renderBanner();
+}
+
+// ── BANNER ────────────────────────────────────────────────────────────────
+function renderBanner(){
+  const el=document.getElementById('prev-banner');
+  const desc=sortedDesc(); if(!desc.length){ el.innerHTML=''; return; }
+  const last=desc[0]; const conso=getConsoMoy();
+  let extra='';
+  if(last.kmdep>0){
+    extra+=`<div class="info-row"><span class="info-key">Km parcourus depuis le plein précédent</span><span class="info-val">${last.kmdep.toLocaleString('fr-FR')} km</span></div>`;
+  }
+  if(last.note) extra+=`<div class="info-row"><span class="info-key" style="font-style:italic;font-size:12px">${last.note}</span></div>`;
+  el.innerHTML=`<div class="prev-banner"><div class="prev-banner-header"><span>Dernier plein</span><small>${fmt(last.date)}</small></div>
+    <div class="info-row"><span class="info-key">${last.litres.toFixed(1)} L · ${last.prixLitre.toFixed(3)} €/L</span><span class="info-val orange">${last.prixTotal.toFixed(2)} €</span></div>
+    ${extra}</div>`;
+}
+
+// ── RÉCAP ─────────────────────────────────────────────────────────────────
+function renderRecap(){
+  const el=document.getElementById('recap-content');
+  if(!fills.length){ el.innerHTML='<div class="card"><div class="empty-state">Aucun plein enregistré.</div></div>'; return; }
+  const desc=sortedDesc(); const last=desc[0];
+  const dep=fills.reduce((s,f)=>s+f.prixTotal,0);
+  const pm=fills.reduce((s,f)=>s+f.prixLitre,0)/fills.length;
+  const conso=getConsoMoy();
+  let kmBlock='';
+
+  el.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total dépensé</div><div class="stat-value">${dep.toFixed(0)}</div><div class="stat-unit">€</div></div>
+      <div class="stat-card"><div class="stat-label">Prix moy./L</div><div class="stat-value">${pm.toFixed(3)}</div><div class="stat-unit">€/L</div></div>
+      <div class="stat-card"><div class="stat-label">Nb de pleins</div><div class="stat-value">${fills.length}</div><div class="stat-unit">pleins</div></div>
+      <div class="stat-card"><div class="stat-label">Conso moy.</div><div class="stat-value">${conso?conso.toFixed(1):'—'}</div><div class="stat-unit">L/100km</div></div>
+      ${kmBlock}
+    </div>
+    <div class="prev-banner">
+      <div class="prev-banner-header"><span>Dernier plein</span><small>${fmt(last.date)}</small></div>
+      <div class="info-row"><span class="info-key">Litres</span><span class="info-val">${last.litres.toFixed(1)} L</span></div>
+      <div class="info-row"><span class="info-key">Prix au litre</span><span class="info-val">${last.prixLitre.toFixed(3)} €/L</span></div>
+      <div class="info-row"><span class="info-key">Prix total</span><span class="info-val orange">${last.prixTotal.toFixed(2)} €</span></div>
+      ${last.kmdep>0?`<div class="info-row"><span class="info-key">Km depuis le précédent</span><span class="info-val">${last.kmdep.toLocaleString('fr-FR')} km</span></div>`:''}
+      ${last.note?`<div class="info-row"><span class="info-key">Note</span><span class="info-val" style="font-size:13px;color:var(--text-muted)">${last.note}</span></div>`:''}
+    </div>`;
+}
+
+// ── HISTORIQUE ────────────────────────────────────────────────────────────
+function renderHistory(){
+  const desc=sortedDesc(); const nb=desc.length;
+  document.getElementById('history-count').textContent=nb+' enregistrement'+(nb>1?'s':'');
+  const el=document.getElementById('history-list');
+  if(!nb){ el.innerHTML='<div class="empty-state">Aucun plein enregistré.</div>'; return; }
+  el.innerHTML=desc.map(f=>`<div class="fill-item">
+    <div class="fill-dot"></div>
+    <div class="fill-date">${fmtY(f.date)}</div>
+    <div class="fill-info">
+      <div class="fill-main">${f.litres.toFixed(1)} L · ${f.prixLitre.toFixed(3)} €/L</div>
+      <div class="fill-sub">${f.kmdep>0?f.kmdep.toLocaleString('fr-FR')+' km':''}</div>
+      ${f.note?`<div class="fill-note">${f.note}</div>`:''}
+    </div>
+    <div class="fill-right"><div class="fill-price">${f.prixTotal.toFixed(2)} €</div></div>
+    <div class="fill-actions">
+      <button class="icon-btn" onclick="openEditModal(${f.id})">✏️</button>
+      <button class="icon-btn" onclick="deleteFill(${f.id})" style="color:var(--red)">🗑</button>
+    </div>
+  </div>`).join('');
+}
+
+// ── VIDANGE ───────────────────────────────────────────────────────────────
+function saveVidange(){
+  const date=document.getElementById('v-date').value;
+  const km=parseInt(document.getElementById('v-km').value);
+  const kmNow=parseInt(document.getElementById('v-km-now').value)||km;
+  if(!date||!km){ alert('Date et kilométrage obligatoires.'); return; }
+  saveVidangeData({date,km,kmNow});
+  renderVidangeBloc(); updateVidangeBadge();
+  const btn=document.querySelector('#subtab-vidange .btn-primary');
+  btn.textContent='✓ Enregistrée !'; btn.style.background='#34C759';
+  setTimeout(()=>{ btn.textContent='Enregistrer la vidange'; btn.style.background=''; },2000);
+}
+
+function renderVidangeBloc(){
+  const el=document.getElementById('vidange-status-bloc');
+  if(vidange){
+    document.getElementById('v-date').value=vidange.date;
+    document.getElementById('v-km').value=vidange.km;
+    document.getElementById('v-km-now').value=vidange.kmNow||'';
+  }
+  if(!vidange){ el.innerHTML=`<div class="vidange-bloc empty"><div class="vidange-title"><span>🛢</span>Aucune vidange enregistrée</div><p style="font-size:13px;color:var(--text-muted)">Renseignez la date et le kilométrage ci-dessous.</p></div>`; return; }
+  const SEUIL=15000,WARN=13000;
+  const kmDep=(vidange.kmNow||vidange.km)-vidange.km;
+  const kmR=Math.max(0,SEUIL-kmDep);
+  const pct=Math.min(100,Math.round(kmDep/SEUIL*100));
+  const st=kmDep>=SEUIL?'alert':kmDep>=WARN?'warn':'ok';
+  const icons={ok:'✅',warn:'⚠️',alert:'🚨'};
+  const msgs={ok:`Prochain changement dans environ <strong>${kmR.toLocaleString('fr-FR')} km</strong>`,warn:`Approche du seuil — encore <strong>${kmR.toLocaleString('fr-FR')} km</strong>`,alert:`Dépassé de <strong>${(kmDep-SEUIL).toLocaleString('fr-FR')} km</strong> — à faire dès que possible !`};
+  el.innerHTML=`<div class="vidange-bloc ${st}">
+    <div class="vidange-title"><span>${icons[st]}</span>Rappel vidange</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Vidange le ${fmt(vidange.date)} à ${vidange.km.toLocaleString('fr-FR')} km</div>
+    <div class="progress-wrap"><div class="progress-fill ${st}" style="width:${pct}%"></div></div>
+    <div class="progress-labels"><span>${kmDep.toLocaleString('fr-FR')} km parcourus</span><span>${SEUIL.toLocaleString('fr-FR')} km</span></div>
+    <div style="font-size:13px;margin-top:10px">${msgs[st]}</div>
+  </div>`;
+}
+
+function updateVidangeBadge(){
+  const b=document.getElementById('vidange-badge');
+  if(!vidange){b.classList.remove('visible');return;}
+  b.classList.toggle('visible',(vidange.kmNow||vidange.km)-vidange.km>=13000);
+}
+
+// ── INTERVENTIONS ─────────────────────────────────────────────────────────
+function addInterv(){
+  const date=document.getElementById('ni-date').value;
+  const typeVal=document.getElementById('ni-type').value;
+  const type=typeVal==='Autre'?document.getElementById('ni-autre').value.trim():typeVal;
+  if(!date||!type){alert('Date et type obligatoires.');return;}
+  intervs.push({date,km:parseInt(document.getElementById('ni-km').value)||0,type,prix:parseFloat(document.getElementById('ni-prix').value)||0,garage:document.getElementById('ni-garage').value.trim(),note:document.getElementById('ni-note').value.trim(),id:Date.now()});
+  saveIntervs();
+  ['ni-km','ni-prix','ni-garage','ni-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ni-type').value='';
+  document.getElementById('ni-date').value=new Date().toISOString().split('T')[0];
+  const btn=document.getElementById('ni-save-btn');
+  btn.textContent='✓ Enregistrée !';btn.style.background='#34C759';
+  setTimeout(()=>{btn.textContent="Enregistrer l'intervention";btn.style.background='';},2000);
+  showSubTab('interventions',document.querySelectorAll('.sub-tab')[1]);
+}
+
+function renderIntervList(){
+  const desc=sortedIntervDesc();const nb=desc.length;
+  document.getElementById('interv-count').textContent=nb+' intervention'+(nb>1?'s':'');
+  const el=document.getElementById('interv-list');
+  const tot=document.getElementById('interv-total-bloc');
+  if(!nb){el.innerHTML='<div class="empty-state">Aucune intervention enregistrée.</div>';tot.style.display='none';return;}
+  tot.style.display='block';
+  document.getElementById('interv-total-val').textContent=desc.reduce((s,i)=>s+(i.prix||0),0).toFixed(2)+' €';
+  el.innerHTML=desc.map(i=>`<div class="interv-item">
+    <div class="interv-dot"></div>
+    <div class="interv-date">${fmtY(i.date)}</div>
+    <div class="interv-info">
+      <div class="interv-type">${i.type}</div>
+      <div class="interv-sub">${i.km?i.km.toLocaleString('fr-FR')+' km':''}${i.garage?' · '+i.garage:''}</div>
+      ${i.note?`<div class="interv-note">${i.note}</div>`:''}
+    </div>
+    ${i.prix?`<div class="interv-price">${i.prix.toFixed(2)} €</div>`:''}
+    <div class="fill-actions">
+      <button class="icon-btn" onclick="openEditIntervModal(${i.id})">✏️</button>
+      <button class="icon-btn" onclick="deleteIntervDirect(${i.id})" style="color:var(--red)">🗑</button>
+    </div>
+  </div>`).join('');
+}
+
+function openEditIntervModal(id){
+  const i=intervs.find(x=>x.id===id);if(!i)return;
+  editingIntervId=id;
+  document.getElementById('ei-date').value=i.date;document.getElementById('ei-km').value=i.km||'';
+  document.getElementById('ei-type').value=i.type;document.getElementById('ei-prix').value=i.prix||'';
+  document.getElementById('ei-garage').value=i.garage||'';document.getElementById('ei-note').value=i.note||'';
+  document.getElementById('edit-interv-modal').classList.remove('hidden');
+}
+function closeEditIntervModal(){document.getElementById('edit-interv-modal').classList.add('hidden');editingIntervId=null;}
+function saveEditInterv(){
+  if(!editingIntervId)return;
+  const idx=intervs.findIndex(x=>x.id===editingIntervId);if(idx===-1)return;
+  intervs[idx]={...intervs[idx],date:document.getElementById('ei-date').value,km:parseInt(document.getElementById('ei-km').value)||0,type:document.getElementById('ei-type').value,prix:parseFloat(document.getElementById('ei-prix').value)||0,garage:document.getElementById('ei-garage').value.trim(),note:document.getElementById('ei-note').value.trim()};
+  saveIntervs();closeEditIntervModal();renderIntervList();
+}
+function deleteInterv(){
+  if(!editingIntervId||!confirm('Supprimer ?'))return;
+  intervs=intervs.filter(x=>x.id!==editingIntervId);saveIntervs();closeEditIntervModal();renderIntervList();
+}
+function deleteIntervDirect(id){
+  if(!confirm('Supprimer ?'))return;
+  intervs=intervs.filter(x=>x.id!==id);saveIntervs();renderIntervList();
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────
+function isDark(){return window.matchMedia('(prefers-color-scheme:dark)').matches;}
+function cc(){return isDark()?{grid:'rgba(255,255,255,0.07)',text:'#8A8A8E',orange:'#E8650A',orangeA:'rgba(232,101,10,0.25)',blue:'#5AC8FA',green:'#34C759'}:{grid:'rgba(0,0,0,0.07)',text:'#8A8A8E',orange:'#E8650A',orangeA:'rgba(232,101,10,0.15)',blue:'#007AFF',green:'#34C759'};}
+function makeChart(id,cfg){
+  if(charts[id]){charts[id].destroy();delete charts[id];}
+  const cv=document.getElementById(id);if(!cv)return;
+  const bx=cv.parentElement;cv.width=bx.offsetWidth||340;cv.height=200;
+  charts[id]=new Chart(cv,cfg);
+}
+function baseOpts(yFmt){
+  const c=cc();
+  return {responsive:false,animation:{duration:400},plugins:{legend:{display:false}},scales:{x:{grid:{color:c.grid},ticks:{color:c.text,font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:10}},y:{grid:{color:c.grid},ticks:{color:c.text,font:{size:10},callback:yFmt}}}};
+}
+
+function renderStats(){
+  const el=document.getElementById('stats-content');
+  const s=sortedAsc();
+  if(s.length<2){el.innerHTML='<div class="card"><div class="empty-state">Ajoutez au moins 2 pleins pour voir les statistiques.</div></div>';return;}
+  const c=cc();
+  const dep=fills.reduce((a,f)=>a+f.prixTotal,0);
+  const litresT=fills.reduce((a,f)=>a+f.litres,0);
+  const pm=fills.reduce((a,f)=>a+f.prixLitre,0)/fills.length;
+  const conso=getConsoMoy();
+  const withKm=s.filter(f=>f.kmdep>0);
+  const kmTot=withKm.reduce((a,f)=>a+f.kmdep,0);
+  const bestP=Math.min(...fills.map(f=>f.prixLitre));
+  const worstP=Math.max(...fills.map(f=>f.prixLitre));
+  const bpf=fills.find(f=>f.prixLitre===bestP);
+  const wpf=fills.find(f=>f.prixLitre===worstP);
+  let intMoy='—';
+  if(s.length>=2){const span=(new Date(s[s.length-1].date+'T12:00')-new Date(s[0].date+'T12:00'))/86400000;intMoy=Math.round(span/(s.length-1))+' j';}
+  const byYear={};
+  fills.forEach(f=>{const y=f.date.slice(0,4);if(!byYear[y])byYear[y]=0;byYear[y]+=f.prixTotal;});
+  const consoManuelle=fills.filter(f=>f.conso&&f.conso>0).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const allSorted=s;
+  const consoArr=consoManuelle.map(f=>{const idx=allSorted.findIndex(x=>x.id===f.id);const prev=idx>0?allSorted[idx-1]:null;return{date:prev?prev.date:f.date,datePlein:f.date,v:f.conso,kmdep:f.kmdep};});
+
+  el.innerHTML=`
+    <div class="kpi-row">
+      <div class="kpi accent"><div class="kpi-val">${dep.toFixed(0)}€</div><div class="kpi-lbl">Total</div></div>
+      <div class="kpi"><div class="kpi-val">${litresT.toFixed(0)}L</div><div class="kpi-lbl">Litres</div></div>
+      <div class="kpi"><div class="kpi-val">${fills.length}</div><div class="kpi-lbl">Pleins</div></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-val">${conso?conso.toFixed(1):'—'}</div><div class="kpi-lbl">L/100km</div></div>
+      <div class="kpi"><div class="kpi-val">${pm.toFixed(3)}</div><div class="kpi-lbl">€/L moy.</div></div>
+      <div class="kpi"><div class="kpi-val">${intMoy}</div><div class="kpi-lbl">Intervalle</div></div>
+    </div>
+    <div class="chart-wrap"><div class="chart-header"><div class="chart-title">Prix au litre dans le temps</div><div class="chart-badge">${bestP.toFixed(3)} — ${worstP.toFixed(3)} €</div></div><div class="chart-box"><canvas id="chart-prix"></canvas></div></div>
+    ${consoArr.length>=2?`<div class="chart-wrap"><div class="chart-header"><div class="chart-title">Consommation réelle par plein</div><div class="chart-badge">${consoArr.length} relevés</div></div><div class="chart-box"><canvas id="chart-conso"></canvas></div></div>`:''}
+    <div class="chart-wrap"><div class="chart-header"><div class="chart-title">Dépense par plein</div><div class="chart-badge">${(dep/fills.length).toFixed(0)} € moy.</div></div><div class="chart-box"><canvas id="chart-dep"></canvas></div></div>
+    ${withKm.length>=2?`<div class="chart-wrap"><div class="chart-header"><div class="chart-title">Km parcourus par plein</div><div class="chart-badge">${kmTot.toLocaleString('fr-FR')} km total</div></div><div class="chart-box"><canvas id="chart-km"></canvas></div></div>`:''}
+    <div class="chart-wrap"><div class="chart-header"><div class="chart-title">Dépense annuelle</div><div class="chart-badge">${Object.keys(byYear).length} années</div></div><div class="chart-box" style="height:160px"><canvas id="chart-year"></canvas></div></div>
+    <div class="trend-row">
+      <div class="trend-card"><div class="trend-top"><div class="trend-label">Meilleur prix</div><div style="color:var(--green);font-size:16px">↓</div></div><div class="trend-val" style="color:var(--green)">${bestP.toFixed(3)} €/L</div><div class="trend-sub">${fmtS(bpf.date)}</div></div>
+      <div class="trend-card"><div class="trend-top"><div class="trend-label">Prix le + haut</div><div style="color:var(--red);font-size:16px">↑</div></div><div class="trend-val" style="color:var(--red)">${worstP.toFixed(3)} €/L</div><div class="trend-sub">${fmtS(wpf.date)}</div></div>
+    </div>
+    <div class="card"><div class="card-title">Comparatif détaillé</div>
+      <table class="compare-table"><thead><tr><th>Date</th><th>L</th><th>€/L</th><th>Total</th><th>Km</th></tr></thead><tbody id="cmp-body"></tbody></table>
+    </div>`;
+
+  setTimeout(()=>{
+    const maxD=Math.max(...s.map(f=>f.prixTotal));
+    const maxKm=withKm.length?Math.max(...withKm.map(f=>f.kmdep)):1;
+    makeChart('chart-prix',{type:'line',data:{labels:s.map(f=>fmtY(f.date)),datasets:[{data:s.map(f=>+f.prixLitre.toFixed(3)),borderColor:c.orange,backgroundColor:c.orangeA,borderWidth:2,pointRadius:2,fill:true,tension:.3}]},options:baseOpts(v=>v.toFixed(3)+'€')});
+    if(consoArr.length>=2) makeChart('chart-conso',{type:'line',data:{labels:consoArr.map(d=>fmtY(d.date)),datasets:[{data:consoArr.map(d=>d.v),borderColor:c.blue,backgroundColor:'rgba(0,122,255,0.1)',borderWidth:2,pointRadius:3,fill:true,tension:.3}]},options:{...baseOpts(v=>v+' L'),plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>`Trajet jusqu'au ${fmtY(consoArr[ctx[0].dataIndex].datePlein)}`,label:ctx=>` ${ctx.raw.toFixed(1)} L/100 · ${consoArr[ctx.dataIndex]?.kmdep?.toLocaleString('fr-FR')||'?'} km`}}}}});
+    makeChart('chart-dep',{type:'bar',data:{labels:s.map(f=>fmtY(f.date)),datasets:[{data:s.map(f=>+f.prixTotal.toFixed(0)),backgroundColor:s.map(f=>f.prixTotal===maxD?'rgba(255,59,48,.3)':c.orangeA),borderColor:s.map(f=>f.prixTotal===maxD?'#FF3B30':c.orange),borderWidth:1.5,borderRadius:3}]},options:baseOpts(v=>v+'€')});
+    if(withKm.length>=2) makeChart('chart-km',{type:'bar',data:{labels:withKm.map(f=>fmtY(f.date)),datasets:[{data:withKm.map(f=>f.kmdep),backgroundColor:withKm.map(f=>f.kmdep===maxKm?'rgba(52,199,89,.3)':c.orangeA),borderColor:withKm.map(f=>f.kmdep===maxKm?c.green:c.orange),borderWidth:1.5,borderRadius:3}]},options:baseOpts(v=>v+'km')});
+    const years=Object.keys(byYear).sort();
+    makeChart('chart-year',{type:'bar',data:{labels:years,datasets:[{data:years.map(y=>+byYear[y].toFixed(0)),backgroundColor:c.orangeA,borderColor:c.orange,borderWidth:1.5,borderRadius:4}]},options:baseOpts(v=>v+'€')});
+    const tbody=document.getElementById('cmp-body');
+    if(tbody) tbody.innerHTML=[...s].reverse().map(f=>{
+      const pc=f.prixLitre===bestP?'td-best':f.prixLitre===worstP?'td-worst':'';
+      const kc=f.kmdep>0&&f.kmdep===maxKm?'td-best':'';
+      const bw=f.kmdep>0?Math.round(f.kmdep/maxKm*50):0;
+      return `<tr><td class="td-date">${fmtY(f.date)}</td><td>${f.litres.toFixed(1)}</td><td class="${pc}">${f.prixLitre.toFixed(3)}</td><td>${f.prixTotal.toFixed(0)}€</td><td><div class="mini-bar-wrap">${bw?`<span class="mini-bar" style="width:${bw}px"></span>`:''}<span class="${kc}">${f.kmdep>0?f.kmdep.toLocaleString('fr-FR'):'—'}</span></div></td></tr>`;
+    }).join('');
+  },80);
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────────────────────────
+function exportData(){
+  const data = {
+    version: 'monplein_v5',
+    exportDate: new Date().toISOString(),
+    fills: fills,
+    intervs: intervs,
+    vidange: vidange
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = `monplein-sauvegarde-${d}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data.fills || !Array.isArray(data.fills)) throw new Error('Format invalide');
+      if(!confirm(`Importer ${data.fills.length} pleins${data.intervs?.length?' et '+data.intervs.length+' interventions':''}  ? Vos données actuelles seront remplacées.`)) return;
+      fills = data.fills;
+      intervs = data.intervs || [];
+      vidange = data.vidange || null;
+      save(); saveIntervs(); saveVidangeData(vidange);
+      renderBanner(); renderRecap();
+      const msg = document.getElementById('import-msg');
+      msg.textContent = `✓ ${fills.length} pleins importés avec succès`;
+      msg.style.display = 'block';
+      setTimeout(()=>{ msg.style.display='none'; },4000);
+    } catch(err) {
+      alert('Fichier invalide. Vérifiez qu\'il s\'agit bien d\'une sauvegarde MonPlein.');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+document.getElementById('input-date').value=new Date().toISOString().split('T')[0];
+document.getElementById('ni-date').value=new Date().toISOString().split('T')[0];
+renderBanner();
+updateVidangeBadge();
+</script>
+</body>
+</html>
